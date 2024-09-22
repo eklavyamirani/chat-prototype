@@ -5,15 +5,14 @@
     "dockerComposeFile": "docker-compose.yml",
     "service": "app",
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers/features/dotnet:2": {},
 		"ghcr.io/devcontainers/features/node:1": {},
 		"ghcr.io/devcontainers-community/npm-features/typescript:1": {},
 		"ghcr.io/itsmechlark/features/postgresql:1": {}
-	},
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+    },
 
 	// Configure tool-specific properties.
 	// "customizations": {},
