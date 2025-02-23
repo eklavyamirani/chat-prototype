@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm
 
 # pull the latest nvim. This is a workaround for debian's nvim being too old.
 # TODO: can this be turned into a devcontainer feature?
-RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz \
+RUN curl --fail-with-body -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz \
      && sudo rm -rf /opt/nvim \
      && sudo tar -C /opt -xzf nvim-linux64.tar.gz
 
