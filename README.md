@@ -21,3 +21,12 @@ dotnet new gitignore
 ```zsh
 dotnet new apicontroller --actions --name <controller name>
 ```
+
+### for devmode, enable cors
+```csharp
+app.UseCors(builder => 
+  builder.AllowAnyOrigin()
+      .AllowAnyMethod()
+      .AllowAnyHeader()
+);
+```
