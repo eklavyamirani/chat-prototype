@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # set the path to the directory of the script
-cd "$(dirname "$0")"
+cd "$(cd "$(dirname "$0")" && pwd)"
 
 # Define the file paths
 env_file=".postgres.env"
