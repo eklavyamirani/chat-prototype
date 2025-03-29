@@ -15,5 +15,5 @@ if [ ! -f "$env_file" ]; then
     cp "$sample_file" "$env_file"
     
     # Replace every "=" with "=postgres" in the copied file
-    sed -i 's/=/=postgres/g' "$env_file"
+    awk -F= '{print $1"=postgres"}' "$sample_file" > "$env_file"
 fi
