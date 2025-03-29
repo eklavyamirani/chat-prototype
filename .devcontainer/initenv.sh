@@ -1,4 +1,6 @@
-#!/bin/zsh
+#!/bin/bash
+
+set -e
 
 # set the path to the directory of the script
 cd .devcontainer
@@ -13,5 +15,5 @@ if [ ! -f "$env_file" ]; then
     cp "$sample_file" "$env_file"
     
     # Replace every "=" with "=postgres" in the copied file
-    sed -i '' 's/=/=postgres/g' "$env_file"
+    sed -i 's/=/=postgres/g' "$env_file"
 fi
