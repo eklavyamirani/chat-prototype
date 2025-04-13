@@ -23,9 +23,10 @@ services:
 
   db:
     image: postgres:14.3
+    container_name: db
     restart: unless-stopped
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./seed_database.sql:/docker-entrypoint-initdb.d/seed_database.sql
     env_file:
       - .postgres.env
 
