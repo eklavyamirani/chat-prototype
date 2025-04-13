@@ -1,6 +1,10 @@
+### [Optional] seed the database
+Use [seed_database.sql](.devcontainer/seed_database.sql) to seed the dev database.
+
+To validate use ```psql -h db -U $PGUSER``` to connect to db.
+
 ### Setup instructions
-1. Setup the postgres config in .devcontainer/.postgres.env (copy the sample, rename it to .postgres.env and fill in the values)
-2. Load the devcontainer
+1. Load the devcontainer
 
 ### create the react app in the container
 ```zsh
