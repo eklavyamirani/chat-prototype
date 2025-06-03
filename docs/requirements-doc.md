@@ -1,6 +1,6 @@
 # Functional Requirements Document  
 **Project**: Chat Prototype with `llama.cpp` + OpenAI-compatible Back-ends  
-**Version**: 0.4  
+**Version**: 0.5
 **Purpose**: Define **unambiguous** functional requirements for a chat application that supports  
 1) local inference via `llama.cpp` and  
 2) any endpoint implementing the OpenAI Chat API,  
@@ -20,14 +20,16 @@ A single-user desktop/web client that lets the user chat with an LLM, call nativ
 | **MCP** | Model Context Protocol v1 message schema. |
 | **Function Call** | JSON object in the assistant response that requests execution of a registered native function. |
 | **Agent** | A distinct LLM instance with its own identity and parameters, participating as an independent speaker in the conversation. |
+| **Agent Context Window** | The collection of recent messages maintained separately for each agent, truncated when token limit is reached. |
 
 ---
 
 ## 3  Constraints
 * OS: macOS or Linux.  
-* GUI or CLI is allowed, but a **Settings** UI must exist (see FR11–FR15).  
-* Context length limited to the current model’s max tokens.  
-* No hot-switching back-ends mid-session.
+* GUI or CLI is allowed, but a **Settings** UI must exist (see FR11–FR15, FR24).  
+* Context length limited to each agent’s max tokens (enforced per-agent).  
+* No hot‑switching back‑ends mid‑session **for any given agent**; different agents may use different back‑ends simultaneously.  
+* Config file may store API keys in plain text; the UI **shall** warn the user to keep file permissions restrictive.
 
 ---
 
@@ -60,7 +62,15 @@ A single-user desktop/web client that lets the user chat with an LLM, call nativ
 | **FR14** | Environment variables **shall** override conflicting values in the configuration file (at minimum: `LLM_CHAT_API_KEY`). |
 | **FR15** | The UI **shall** provide **Import** (load existing JSON/YAML) and **Export** (download current settings) actions. |
 | **FR16** | The user **shall** choose the back-end (`local` or `openai`) **before** the first chat message; back-end cannot change during an active session. |
-| **FR17** | The system **shall** support configuring and running multiple LLM agents within a single conversation. The UI **shall** label each agent clearly and display their messages in chronological order. |
+| **FR17** | The system **shall** support configuring and running multiple LLM agents within a single conversation, each maintaining an independent context window. The UI **shall** label each agent clearly and display their messages chronologically. |
+| **FR18** | The configuration file **shall** define an array `agents[]`; each element must include `name`, `backend_type`, `model`, and may optionally include `system_prompt`, `api_key`, and `llama_flags`. |
+| **FR19** | The system **shall** truncate each agent’s context when its token limit is exceeded, using oldest‑first removal. |
+| **FR20** | Any agent may request a function call; the system **shall** serialize and execute calls in the order they are received within a single turn. |
+| **FR21** | Assistant streaming with multiple agents **shall** occur sequentially in the agent order defined in `agents[]`. |
+| **FR22** | If a single agent encounters an API/back‑end error, the system **shall** continue the session, display an error message in place of that agent’s reply, and allow other agents to proceed. |
+| **FR23** | The system **shall** log timestamped user messages, agent replies, and function invocations to `~/.llm_chat/session.log`. |
+| **FR24** | The Settings UI **shall** allow users to add, edit, delete agents and to import/export individual agent configurations. |
+| **FR25** | The config file **shall** support an optional global `max_agents` value; if exceeded at startup, the application **shall** refuse to launch and display an explanatory error. |
 
 ---
 
