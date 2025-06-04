@@ -5,32 +5,7 @@ To validate use ```psql -h db -U $PGUSER``` to connect to db.
 
 ### Setup instructions
 1. Load the devcontainer
+2. run `npm i`
 
-### create the react app in the container
-```zsh
-npx create-react-app <appname>
-```
-
-### create dotnet webapi
-```zsh
-dotnet new webapi -o <project_name> --use-controllers --use-program-main
-```
-
-### create dotnet gitignore
-```zsh
-dotnet new gitignore
-```
-
-### create new controller
-```zsh
-dotnet new apicontroller --actions --name <controller name>
-```
-
-### for devmode, enable cors
-```csharp
-app.UseCors(builder => 
-  builder.AllowAnyOrigin()
-      .AllowAnyMethod()
-      .AllowAnyHeader()
-);
-```
+### Run the app
+`npm run dev`
