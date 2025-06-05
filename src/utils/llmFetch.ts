@@ -12,18 +12,27 @@ export async function llmFetch({
   onToken: (token: string) => void;
 }): Promise<void> {
   const { backendUrl, apiKey, model } = config;
+  // Convert functions to tools if present
+  let tools = undefined;
+  if (functions && Array.isArray(functions) && functions.length > 0) {
+    tools = functions.map((fn: any) => ({
+      type: 'function',
+      function: fn
+    }));
+  }
+  const reqBody: any = {
+    model,
+    stream: true,
+    messages,
+  };
+  if (tools) reqBody.tools = tools;
   const res = await fetch(`${backendUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      stream: true,
-      messages,
-      functions,
-    }),
+    body: JSON.stringify(reqBody),
   });
 
   if (res.headers.get('content-type')?.includes('text/event-stream')) {
@@ -41,16 +50,15 @@ export async function llmFetch({
         if (line.startsWith('data: ')) {
           const data = line.slice(6).trim();
           if (data === '[DONE]') return;
-          try {
-            const json = JSON.parse(data);
-            onToken(json.choices?.[0]?.delta?.content || '');
-          } catch {}
+          onToken(data);
         }
       }
     }
   } else {
     // fallback: not streaming
     const json = await res.json();
-    onToken(json.choices?.[0]?.message?.content || '');
+    // Only pass the content string, not the full JSON
+    const content = json.choices?.[0]?.message?.content || '';
+    onToken(content);
   }
 }

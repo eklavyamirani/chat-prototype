@@ -49,18 +49,115 @@ export default function MessageInput() {
     // Fetch all messages for this session
     const messages = await db.messages.where('sessionId').equals(session.id).sortBy('ts');
 
-    // Stream tokens and update assistant message
+    // Prepare function definitions for LLM (exclude code)
+    const functionDefs = (config.functions || []).map(fn => ({
+      name: fn.name,
+      description: fn.description,
+      parameters: fn.parameters
+    }));
+
+    // Stream tokens, update assistant message, and accumulate tool call arguments
     let assistantContent = '';
+    let toolCalls: Record<string, { name: string; arguments: string }> = {};
+    let toolCallsFinished = false;
     await llmFetch({
       config,
       messages,
-      onToken: async (token: string) => {
-        if (token) {
-          assistantContent += token;
-          await db.messages.update(assistantMsgId, { content: assistantContent });
+      functions: functionDefs,
+      onToken: async (tokenOrJson: string) => {
+        // Only append to assistantContent if delta.content exists, never save raw JSON
+        if (tokenOrJson.trim().startsWith('{')) {
+          try {
+            const data = JSON.parse(tokenOrJson);
+            // Handle tool_calls streaming
+            const delta = data.choices?.[0]?.delta;
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                // Always use the same id for accumulating name and arguments
+                const id = tc.id || Object.keys(toolCalls)[0];
+                if (!toolCalls[id]) {
+                  toolCalls[id] = { name: tc.function?.name, arguments: '' };
+                }
+                if (tc.function?.name) {
+                  toolCalls[id].name = tc.function.name;
+                }
+                if (tc.function?.arguments) {
+                  toolCalls[id].arguments += tc.function.arguments;
+                }
+              }
+              return;
+            }
+
+            // Detect finish_reason for tool_calls
+            if (data.choices?.[0]?.finish_reason === 'tool_calls') {
+              toolCallsFinished = true;
+              return;
+            }
+
+            if (delta?.content) {
+              assistantContent += delta.content;
+              return;
+            }
+          } catch (err) {
+            // Not JSON, ignore
+          }
         }
       },
     });
+    // ...existing code...
+
+    // If tool calls finished, run each function in sandbox and add tool message
+    if (toolCallsFinished && Object.keys(toolCalls).length > 0) {
+      for (const id of Object.keys(toolCalls)) {
+        const tc = toolCalls[id];
+        await db.messages.update(assistantMsgId, { subtext: JSON.stringify(tc) });
+        const fnDef = (config.functions || []).find(f => f.name === tc.name);
+        if (fnDef) {
+          const { FunctionSandbox } = await import('../utils/FunctionSandbox');
+          const sandbox = new FunctionSandbox();
+          let toolResult = '';
+          try {
+            const args = tc.arguments ? JSON.parse(tc.arguments) : {};
+            const res = await sandbox.runFunction(fnDef.code, args);
+            if (res && res.result !== undefined) {
+              if (typeof res.result === 'string') {
+                toolResult = res.result;
+              } else if (res.result !== null && res.result !== undefined) {
+                toolResult = JSON.stringify(res.result);
+              } else {
+                toolResult = '[Function returned empty result]';
+              }
+            } else if (res && res.error) {
+              toolResult = res.error;
+            } else {
+              toolResult = '[Function returned no result]';
+            }
+          } catch (err) {
+            toolResult = 'Function error: ' + (err?.toString() || 'unknown');
+          }
+          sandbox.destroy();
+          const toolMsg = {
+            id: uuidv4(),
+            sessionId: session.id,
+            agent: 'default',
+            role: 'tool' as const,
+            content: toolResult,
+            ts: Date.now() + 2,
+          };
+          // ...existing code...
+          await db.messages.add(toolMsg);
+        }
+      }
+    } else {
+      // If no tool calls, just update the assistant message with the final content
+      if (assistantContent.startsWith('{')) {
+        const data = JSON.parse(assistantContent);
+        if (data?.choices?.[0]?.delta?.content) {
+          assistantContent = data.choices[0].delta.content;
+        }
+      }
+      await db.messages.update(assistantMsgId, { content: assistantContent });
+    }
     setSending(false);
   };
 

@@ -5,7 +5,30 @@
 ### Run the app
 `npm run dev`
 
-### [Optional] seed the database
-Use [seed_database.sql](.devcontainer/seed_database.sql) to seed the dev database.
+### function calling sample definition
+#### name
+add_memory
 
-To validate use ```psql -h db -U $PGUSER``` to connect to db.
+#### description
+allows storing relevant pieces of information into long term memory to add personalized experience for the user
+
+#### params
+```json
+{
+  "type": "object",
+  "properties": {
+    "memory": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "memory"
+  ]
+}
+```
+
+#### body
+```js
+console.log("memory called " + args.memory);
+return "stored " + args.memory
+```
