@@ -4,12 +4,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadConfig } from '../config';
 import { llmFetch } from '../utils/llmFetch';
 
-export default function MessageInput() {
+type MessageInputProps = {
+  session: { id: string } | null;
+};
+
+export default function MessageInput({ session }: MessageInputProps) {
   const [value, setValue] = useState('');
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
-    if (!value.trim()) return;
+    if (!value.trim() || !session) return;
     setSending(true);
     const config = loadConfig();
     if (!config) {
@@ -17,12 +21,7 @@ export default function MessageInput() {
       setSending(false);
       return;
     }
-    // For MVP, use the latest session
-    const session = await db.sessions.orderBy('startedAt').last();
-    if (!session) {
-      setSending(false);
-      return;
-    }
+    // Use selected session
     // Add user message
     const userMsgId = uuidv4();
     await db.messages.add({
@@ -173,12 +172,12 @@ export default function MessageInput() {
           }
         }}
         placeholder="Type a message..."
-        disabled={sending}
+        disabled={sending || !session}
       />
       <button
         type="submit"
         className="px-4 py-2 rounded bg-blue-500 text-white disabled:opacity-50"
-        disabled={sending || !value.trim()}
+        disabled={sending || !value.trim() || !session}
       >
         Send
       </button>

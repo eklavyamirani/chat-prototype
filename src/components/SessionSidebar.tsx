@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function SessionSidebar() {
-  const sessions = useLiveQuery(() => db.sessions.orderBy('startedAt').reverse().limit(50).toArray(), []);
+type SessionSidebarProps = {
+  sessions: Array<{ id: string; title: string }>,
+  selectedSessionId: string | null,
+  setSelectedSessionId: (id: string) => void,
+};
+
+export default function SessionSidebar({ sessions, selectedSessionId, setSelectedSessionId }: SessionSidebarProps) {
   const [newTitle, setNewTitle] = useState('');
 
   const createSession = async () => {
@@ -42,9 +46,19 @@ export default function SessionSidebar() {
       </div>
       <ul className="flex-1 overflow-y-auto">
         {sessions?.map(s => (
-          <li key={s.id} className="flex items-center justify-between mb-1">
+          <li
+            key={s.id}
+            className={`flex items-center justify-between mb-1 cursor-pointer rounded px-2 py-1 ${selectedSessionId === s.id ? 'bg-blue-200 dark:bg-blue-700 font-bold' : ''}`}
+            onClick={() => setSelectedSessionId(s.id)}
+          >
             <span>{s.title}</span>
-            <button className="text-red-500" onClick={() => deleteSession(s.id)}>🗑️</button>
+            <button
+              className="text-red-500 ml-2"
+              onClick={e => {
+                e.stopPropagation();
+                deleteSession(s.id);
+              }}
+            >🗑️</button>
           </li>
         ))}
       </ul>
