@@ -96,6 +96,7 @@ export default function MessageInput() {
 
             if (delta?.content) {
               assistantContent += delta.content;
+              await db.messages.update(assistantMsgId, { content: assistantContent });
               return;
             }
           } catch (err) {
@@ -148,15 +149,6 @@ export default function MessageInput() {
           await db.messages.add(toolMsg);
         }
       }
-    } else {
-      // If no tool calls, just update the assistant message with the final content
-      if (assistantContent.startsWith('{')) {
-        const data = JSON.parse(assistantContent);
-        if (data?.choices?.[0]?.delta?.content) {
-          assistantContent = data.choices[0].delta.content;
-        }
-      }
-      await db.messages.update(assistantMsgId, { content: assistantContent });
     }
     setSending(false);
   };
