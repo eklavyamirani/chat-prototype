@@ -48,12 +48,22 @@ export default function MessageInput({ session }: MessageInputProps) {
     // Fetch all messages for this session
     const messages = await db.messages.where('sessionId').equals(session.id).sortBy('ts');
 
-    // Prepare function definitions for LLM (exclude code)
-    const functionDefs = (config.functions || []).map(fn => ({
+
+    // Prepare function definitions for LLM (exclude code) and enabled MCP tools
+    const userFns = (config.functions || []).map(fn => ({
       name: fn.name,
       description: fn.description,
       parameters: fn.parameters
     }));
+    // Gather enabled MCP tools from all servers
+    const mcpFns = (config.mcpServers || [])
+      .flatMap(server => (server.tools || []).filter(tool => tool.enabled))
+      .map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters
+      }));
+    const functionDefs = [...userFns, ...mcpFns];
 
     // Stream tokens, update assistant message, and accumulate tool call arguments
     let assistantContent = '';

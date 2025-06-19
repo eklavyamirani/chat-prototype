@@ -21,6 +21,19 @@ export type UserFunctionDef = {
   code: string; // JS code as string
 };
 
+
+export type McpTool = {
+  name: string;
+  description: string;
+  parameters: any;
+  enabled: boolean;
+};
+
+export type McpServer = {
+  url: string;
+  tools: McpTool[];
+};
+
 export type ChatConfig = {
   backendUrl: string;
   apiKey: string;
@@ -28,4 +41,5 @@ export type ChatConfig = {
   maxTokens: number;
   agents: string[];
   functions?: UserFunctionDef[];
+  mcpServers?: McpServer[];
 };

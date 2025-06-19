@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { loadConfig, saveConfig, clearConfig } from '../config';
-import { ChatConfig } from '../types';
+import { ChatConfig, McpServer, McpTool } from '../types';
+import { fetchMcpTools } from '../utils/mcpProxy';
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const defaultConfig: ChatConfig = {
@@ -11,6 +13,49 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
     agents: [],
   };
   const [config, setConfig] = useState<ChatConfig>(loadConfig() || defaultConfig);
+  const [mcpUrlDraft, setMcpUrlDraft] = useState('');
+  const [mcpLoading, setMcpLoading] = useState(false);
+  const [mcpError, setMcpError] = useState('');
+  // MCP server management
+  const handleAddMcpServer = async () => {
+    if (!mcpUrlDraft.trim()) return;
+    setMcpLoading(true);
+    setMcpError('');
+    try {
+      const tools = await fetchMcpTools(mcpUrlDraft.trim());
+      const newServer: McpServer = { url: mcpUrlDraft.trim(), tools };
+      setConfig({
+        ...config,
+        mcpServers: [...(config.mcpServers || []), newServer],
+      });
+      setMcpUrlDraft('');
+    } catch (err: any) {
+      setMcpError('Failed to fetch tools: ' + (err?.message || 'unknown error'));
+    } finally {
+      setMcpLoading(false);
+    }
+  };
+
+  const handleRemoveMcpServer = (idx: number) => {
+    const newServers = (config.mcpServers || []).slice();
+    newServers.splice(idx, 1);
+    setConfig({ ...config, mcpServers: newServers });
+  };
+
+  const handleToggleMcpTool = (serverIdx: number, toolIdx: number) => {
+    const newServers = (config.mcpServers || []).map((srv, sIdx) => {
+      if (sIdx !== serverIdx) return srv;
+      return {
+        ...srv,
+        tools: srv.tools.map((tool, tIdx) =>
+          tIdx === toolIdx
+            ? { ...tool, enabled: !(tool.enabled ?? false) }
+            : tool
+        ),
+      };
+    });
+    setConfig({ ...config, mcpServers: newServers });
+  };
   const [editingFunction, setEditingFunction] = useState<number | null>(null);
   const [fnDraft, setFnDraft] = useState({ name: '', description: '', parameters: '{}', code: '' });
   // Function definitions UI handlers
@@ -121,6 +166,55 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           <label className="block">Max Tokens
             <input name="maxTokens" type="number" className="w-full p-2 rounded border mb-2" value={config?.maxTokens || 0} onChange={handleChange} />
           </label>
+        </div>
+        {/* MCP Servers Section */}
+        <div className="mb-4 mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="font-semibold">MCP Servers</span>
+            <div className="flex gap-2">
+              <input
+                className="p-1 rounded border text-xs"
+                placeholder="https://mcp-server-url"
+                value={mcpUrlDraft}
+                onChange={e => setMcpUrlDraft(e.target.value)}
+                disabled={mcpLoading}
+              />
+              <button
+                className="px-2 py-1 bg-blue-400 text-white rounded text-xs"
+                onClick={handleAddMcpServer}
+                disabled={mcpLoading || !mcpUrlDraft.trim()}
+              >Add</button>
+            </div>
+          </div>
+          {mcpError && <div className="text-xs text-red-500 mb-2">{mcpError}</div>}
+          {(config.mcpServers && config.mcpServers.length > 0) ? (
+            <ul className="mb-2">
+              {config.mcpServers.map((srv, sIdx) => (
+                <li key={srv.url} className="mb-2 border rounded p-2 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="truncate max-w-xs text-xs" title={srv.url}>{srv.url}</span>
+                    <button className="text-xs px-2 py-0.5 bg-red-400 text-white rounded" onClick={() => handleRemoveMcpServer(sIdx)}>Remove</button>
+                  </div>
+                  <div className="ml-2">
+                    <span className="font-semibold text-xs">Tools:</span>
+                    <ul>
+                      {(srv.tools || []).map((tool, tIdx) => (
+                        <li key={tool.name} className="flex items-center gap-2 text-xs my-1">
+                          <input
+                            type="checkbox"
+                            checked={tool.enabled}
+                            onChange={() => handleToggleMcpTool(sIdx, tIdx)}
+                          />
+                          <span className="truncate max-w-xs" title={tool.name}>{tool.name}</span>
+                          <span className="text-gray-500">{tool.description}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : <div className="text-xs text-gray-500 mb-2">No MCP servers added.</div>}
         </div>
         {/* User Functions Section */}
         <div className="mb-4 mt-4">
